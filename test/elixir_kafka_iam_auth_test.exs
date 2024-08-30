@@ -8,7 +8,7 @@ defmodule ExAwsMskIamAuthTest do
   describe "auth/6" do
     test "invalid mechanism" do
       assert {:error, "Invalid SASL mechanism"} =
-               ExAwsMskIamAuth.auth(
+               ElixirKafkaIamAuth.auth(
                  "localhost",
                  nil,
                  :ssl,
@@ -20,7 +20,7 @@ defmodule ExAwsMskIamAuthTest do
 
     test "empty secret/accessid type " do
       assert {:error, "AWS Secret Access Key is empty"} =
-               ExAwsMskIamAuth.auth(
+               ElixirKafkaIamAuth.auth(
                  "localhost",
                  nil,
                  :ssl,
@@ -30,7 +30,7 @@ defmodule ExAwsMskIamAuthTest do
                )
 
       assert {:error, "AWS Secret Key ID is empty"} =
-               ExAwsMskIamAuth.auth(
+               ElixirKafkaIamAuth.auth(
                  "host",
                  nil,
                  :ssl,
@@ -117,7 +117,7 @@ defmodule ExAwsMskIamAuthTest do
       end)
 
       assert :ok =
-               ExAwsMskIamAuth.auth(
+               ElixirKafkaIamAuth.auth(
                  "localhost",
                  port,
                  :ssl,

@@ -1,4 +1,4 @@
-defmodule ExAwsMskIamAuth do
+defmodule ElixirKafkaIamAuth do
   @moduledoc """
   SASL AWS_MSK_IAM auth backend implementation for brod Erlang library.
   To authenticate, supply aws_secret_key_id and aws_secret_access_key with access to MSK cluster
@@ -14,6 +14,21 @@ defmodule ExAwsMskIamAuth do
                             )
 
   @handshake_version 1
+
+  def auth(
+        host,
+        sock,
+        mod,
+        client_id,
+        timeout,
+        _sasl_opts = {mechanism = :AWS_MSK_IAM, :ecs_role_auth}
+      ) do
+    # This will, maybe surprisingly, send a request to the metadata endpoint for the container, it relies on AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
+    # being set
+    %{access_key_id: access_key_id, secret_access_key: secret_access_key} = ExAws.Config.new(:ecs)
+
+    auth(host, sock, mod, client_id, timeout, {mechanism, access_key_id, secret_access_key})
+  end
 
   def auth(
         _host,

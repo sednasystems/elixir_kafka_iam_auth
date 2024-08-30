@@ -1,4 +1,4 @@
-defmodule ExAwsMskIamAuth.MixProject do
+defmodule ElixirKafkaIamAuth.MixProject do
   use Mix.Project
 
   def project do
@@ -24,7 +24,9 @@ defmodule ExAwsMskIamAuth.MixProject do
       {:broadway_kafka, "~> 0.4.1"},
       {:aws_signature, "~> 0.3.0"},
       {:jason, "~> 1.3"},
-      {:hammox, "~> 0.5", only: :test}
+      {:hammox, "~> 0.5", only: :test},
+      {:ex_aws, "~> 2.5"},
+      {:hackney, "~> 1.9"}
     ]
   end
 end
