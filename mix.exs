@@ -3,7 +3,7 @@ defmodule ExAwsMskIamAuth.MixProject do
 
   def project do
     [
-      app: :ex_aws_msk_iam_auth,
+      app: :elixir_kafka_iam_auth,
       version: "0.1.0",
       elixir: "~> 1.13",
       start_permanent: Mix.env() == :prod,

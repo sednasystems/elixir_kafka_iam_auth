@@ -6,9 +6,9 @@ defmodule ExAwsMskIamAuth do
   @behaviour :kpro_auth_backend
   require Logger
 
-  @kpro_lib Application.compile_env(:ex_aws_msk_iam_auth, :kpro_lib, KafkaProtocolLib)
+  @kpro_lib Application.compile_env(:elixir_kafka_iam_auth, :kpro_lib, KafkaProtocolLib)
   @signed_payload_generator Application.compile_env(
-                              :ex_aws_msk_iam_auth,
+                              :elixir_kafka_iam_auth,
                               :signed_payload_generator,
                               SignedPayloadGenerator
                             )
@@ -59,12 +59,17 @@ defmodule ExAwsMskIamAuth do
       )
       when is_binary(aws_secret_key_id) and is_binary(aws_secret_access_key) do
     with :ok <- handshake(sock, mod, timeout, client_id, mechanism, @handshake_version) do
+      region = Application.get_env(:elixir_kafka_iam_auth, :aws_region)
+      service = Application.get_env(:elixir_kafka_iam_auth, :kafka_service)
+
       client_final_msg =
         @signed_payload_generator.get_msk_signed_payload(
           host,
           DateTime.utc_now(),
           aws_secret_key_id,
-          aws_secret_access_key
+          aws_secret_access_key,
+          region,
+          service
         )
 
       server_final_msg = send_recv(sock, mod, client_id, timeout, client_final_msg)

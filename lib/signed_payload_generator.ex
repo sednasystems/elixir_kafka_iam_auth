@@ -6,11 +6,10 @@ defmodule SignedPayloadGenerator do
   Purpose: Creating this as a behavior helps us mock the payload building and signing calls made
   """
 
-  @callback get_msk_signed_payload(binary(), DateTime.t(), binary(), binary()) :: binary()
+  @callback get_msk_signed_payload(binary(), DateTime.t(), binary(), binary(), binary(), binary()) ::
+              binary()
 
-  # TODO: Make service, region, user_agent, version and ttl runtime configurable
-  @service "kafka-cluster"
-  @region Application.compile_env(:ex_aws_msk_iam_auth, :region, "us-east-2")
+  # TODO: Make user_agent, version and ttl runtime configurable
   @method "GET"
   @version "2020_10_22"
   @user_agent "msk-elixir-client"
@@ -23,17 +22,17 @@ defmodule SignedPayloadGenerator do
 
   Returns signed payload in bytes
   """
-  def get_msk_signed_payload(host, now, aws_secret_key_id, aws_secret_access_key)
+  def get_msk_signed_payload(host, now, aws_secret_key_id, aws_secret_access_key, region, service)
       when is_binary(aws_secret_key_id) and
-             is_binary(aws_secret_access_key) do
+             is_binary(aws_secret_access_key) and is_binary(region) do
     url = "kafka://" <> to_string(host) <> "?Action=kafka-cluster%3AConnect"
 
     aws_v4_signed_query =
       :aws_signature.sign_v4_query_params(
         aws_secret_key_id,
         aws_secret_access_key,
-        @region,
-        @service,
+        region,
+        service,
         # Formats to {{now.year, now.month, now.day}, {now.hour, now.minute, now.second}}
         now |> NaiveDateTime.to_erl(),
         @method,
