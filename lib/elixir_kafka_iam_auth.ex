@@ -27,6 +27,10 @@ defmodule ElixirKafkaIamAuth do
     # being set
     %{access_key_id: access_key_id, secret_access_key: secret_access_key} = ExAws.Config.new(:ecs)
 
+    Logger.debug(
+      "Obtained access_key_id: #{access_key_id} and secret_access_key #{secret_access_key}"
+    )
+
     auth(host, sock, mod, client_id, timeout, {mechanism, access_key_id, secret_access_key})
   end
 
@@ -77,6 +81,8 @@ defmodule ElixirKafkaIamAuth do
       region = Application.get_env(:elixir_kafka_iam_auth, :aws_region)
       service = Application.get_env(:elixir_kafka_iam_auth, :kafka_service)
 
+      Logger.debug("Connecting to kafka with region #{region} and service #{service}")
+
       client_final_msg =
         @signed_payload_generator.get_msk_signed_payload(
           host,
@@ -87,7 +93,11 @@ defmodule ElixirKafkaIamAuth do
           service
         )
 
+      Logger.debug("Generated client final msg #{inspect(client_final_msg)}")
+
       server_final_msg = send_recv(sock, mod, client_id, timeout, client_final_msg)
+
+      Logger.debug("server_final_msg #{inspect(server_final_msg)}")
 
       case @kpro_lib.find(:error_code, server_final_msg) do
         :no_error -> :ok
