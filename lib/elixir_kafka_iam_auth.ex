@@ -25,13 +25,24 @@ defmodule ElixirKafkaIamAuth do
       ) do
     # This will, maybe surprisingly, send a request to the metadata endpoint for the container, it relies on AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
     # being set
-    %{access_key_id: access_key_id, secret_access_key: secret_access_key} = ExAws.Config.new(:ecs)
+    %{
+      access_key_id: access_key_id,
+      secret_access_key: secret_access_key,
+      security_token: security_token
+    } = ExAws.Config.new(:ecs)
 
     Logger.debug(
       "Obtained access_key_id: #{access_key_id} and secret_access_key #{secret_access_key}"
     )
 
-    auth(host, sock, mod, client_id, timeout, {mechanism, access_key_id, secret_access_key})
+    auth(
+      host,
+      sock,
+      mod,
+      client_id,
+      timeout,
+      {mechanism, access_key_id, secret_access_key, security_token}
+    )
   end
 
   def auth(
@@ -40,7 +51,8 @@ defmodule ElixirKafkaIamAuth do
         _mod,
         _client_id,
         _timeout,
-        _sasl_opts = {_mechanism = :AWS_MSK_IAM, aws_secret_key_id, _aws_secret_access_key}
+        _sasl_opts =
+          {_mechanism = :AWS_MSK_IAM, aws_secret_key_id, _aws_secret_access_key, _security_token}
       )
       when aws_secret_key_id == nil,
       do: {:error, "AWS Secret Key ID is empty"}
@@ -51,7 +63,8 @@ defmodule ElixirKafkaIamAuth do
         _mod,
         _client_id,
         _timeout,
-        _sasl_opts = {_mechanism = :AWS_MSK_IAM, _aws_secret_key_id, aws_secret_access_key}
+        _sasl_opts =
+          {_mechanism = :AWS_MSK_IAM, _aws_secret_key_id, aws_secret_access_key, _security_token}
       )
       when aws_secret_access_key == nil,
       do: {:error, "AWS Secret Access Key is empty"}
@@ -74,7 +87,8 @@ defmodule ElixirKafkaIamAuth do
         mod,
         client_id,
         timeout,
-        _sasl_opts = {mechanism = :AWS_MSK_IAM, aws_secret_key_id, aws_secret_access_key}
+        _sasl_opts =
+          {mechanism = :AWS_MSK_IAM, aws_secret_key_id, aws_secret_access_key, security_token}
       )
       when is_binary(aws_secret_key_id) and is_binary(aws_secret_access_key) do
     with :ok <- handshake(sock, mod, timeout, client_id, mechanism, @handshake_version) do
@@ -94,7 +108,8 @@ defmodule ElixirKafkaIamAuth do
           aws_secret_key_id,
           aws_secret_access_key,
           region,
-          service
+          service,
+          security_token
         )
 
       Logger.debug("Generated client final msg #{inspect(client_final_msg)}")
@@ -122,6 +137,7 @@ defmodule ElixirKafkaIamAuth do
     req = @kpro_lib.make(:sasl_authenticate, _auth_req_vsn = 0, [{:auth_bytes, payload}])
     rsp = @kpro_lib.send_and_recv(req, sock, mod, client_id, timeout)
 
+    Logger.debug("Sending auth request: #{inspect(req)}")
     Logger.debug("Final Auth Response from server - #{inspect(rsp)}")
 
     rsp

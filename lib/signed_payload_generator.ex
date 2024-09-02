@@ -6,7 +6,15 @@ defmodule SignedPayloadGenerator do
   Purpose: Creating this as a behavior helps us mock the payload building and signing calls made
   """
 
-  @callback get_msk_signed_payload(binary(), DateTime.t(), binary(), binary(), binary(), binary()) ::
+  @callback get_msk_signed_payload(
+              binary(),
+              DateTime.t(),
+              binary(),
+              binary(),
+              binary(),
+              binary(),
+              binary()
+            ) ::
               binary()
 
   # TODO: Make user_agent, version and ttl runtime configurable
@@ -22,7 +30,15 @@ defmodule SignedPayloadGenerator do
 
   Returns signed payload in bytes
   """
-  def get_msk_signed_payload(host, now, aws_secret_key_id, aws_secret_access_key, region, service)
+  def get_msk_signed_payload(
+        host,
+        now,
+        aws_secret_key_id,
+        aws_secret_access_key,
+        region,
+        service,
+        security_token
+      )
       when is_binary(aws_secret_key_id) and
              is_binary(aws_secret_access_key) and is_binary(region) do
     url = "kafka://" <> to_string(host) <> "?Action=kafka-cluster%3AConnect"
@@ -37,7 +53,8 @@ defmodule SignedPayloadGenerator do
         now |> NaiveDateTime.to_erl(),
         @method,
         url,
-        ttl: @ttl
+        ttl: @ttl,
+        session_token: security_token
       )
 
     url_map = :aws_signature_utils.parse_url(aws_v4_signed_query)

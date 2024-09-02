@@ -26,7 +26,7 @@ defmodule ExAwsMskIamAuthTest do
                  :ssl,
                  "client_id",
                  60_000,
-                 {:AWS_MSK_IAM, "access_id", nil}
+                 {:AWS_MSK_IAM, "access_id", nil, "token"}
                )
 
       assert {:error, "AWS Secret Key ID is empty"} =
@@ -36,7 +36,7 @@ defmodule ExAwsMskIamAuthTest do
                  :ssl,
                  "client_id",
                  60_000,
-                 {:AWS_MSK_IAM, nil, "access_secret"}
+                 {:AWS_MSK_IAM, nil, "access_secret", "token"}
                )
     end
 
@@ -112,7 +112,8 @@ defmodule ExAwsMskIamAuthTest do
                                             "access_id",
                                             "access_secret",
                                             "us-east-2",
-                                            "kafka-cluster" ->
+                                            "kafka-cluster",
+                                            "token" ->
         "{\"action\":\"kafka-cluster:Connect\",\"host\":\"localhost\",\"user-agent\":\"msk-elixir-client\",\"version\":\"2020_10_22\",\"x-amz-algorithm\":\"AWS4-HMAC-SHA256\",\"x-amz-credential\":\"aws_secret_key_id/20220422/us-east-2/kafka-cluster/aws4_request\",\"x-amz-date\":\"20220422T111006Z\",\"x-amz-expires\":\"900\",\"x-amz-signature\":\"c61229c0d58532b023d29207adb96801ffa963df9b96c3fd2e736e7b0986c343\",\"x-amz-signedheaders\":\"host\"}"
       end)
 
@@ -123,7 +124,7 @@ defmodule ExAwsMskIamAuthTest do
                  :ssl,
                  "client_id",
                  60_000,
-                 {:AWS_MSK_IAM, "access_id", "access_secret"}
+                 {:AWS_MSK_IAM, "access_id", "access_secret", "token"}
                )
     end
   end
