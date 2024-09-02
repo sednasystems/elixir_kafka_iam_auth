@@ -83,6 +83,10 @@ defmodule ElixirKafkaIamAuth do
 
       Logger.debug("Connecting to kafka with region #{region} and service #{service}")
 
+      Logger.debug(
+        "Params: #{inspect(%{host: host, sock: sock, mod: mod, client_id: client_id, timeout: timeout, sasl_opts: {:AWS_MSK_IAM, aws_secret_key_id, aws_secret_access_key}})}"
+      )
+
       client_final_msg =
         @signed_payload_generator.get_msk_signed_payload(
           host,
