@@ -27,8 +27,7 @@ defmodule ElixirKafkaIamAuth do
     # being set
     %{
       access_key_id: access_key_id,
-      secret_access_key: secret_access_key,
-      security_token: security_token
+      secret_access_key: secret_access_key
     } = ExAws.Config.new(:ecs)
 
     Logger.debug(
@@ -41,7 +40,7 @@ defmodule ElixirKafkaIamAuth do
       mod,
       client_id,
       timeout,
-      {mechanism, access_key_id, secret_access_key, security_token}
+      {mechanism, access_key_id, secret_access_key}
     )
   end
 
@@ -52,7 +51,7 @@ defmodule ElixirKafkaIamAuth do
         _client_id,
         _timeout,
         _sasl_opts =
-          {_mechanism = :AWS_MSK_IAM, aws_secret_key_id, _aws_secret_access_key, _security_token}
+          {_mechanism = :AWS_MSK_IAM, aws_secret_key_id, _aws_secret_access_key}
       )
       when aws_secret_key_id == nil,
       do: {:error, "AWS Secret Key ID is empty"}
@@ -64,7 +63,7 @@ defmodule ElixirKafkaIamAuth do
         _client_id,
         _timeout,
         _sasl_opts =
-          {_mechanism = :AWS_MSK_IAM, _aws_secret_key_id, aws_secret_access_key, _security_token}
+          {_mechanism = :AWS_MSK_IAM, _aws_secret_key_id, aws_secret_access_key}
       )
       when aws_secret_access_key == nil,
       do: {:error, "AWS Secret Access Key is empty"}
@@ -88,7 +87,7 @@ defmodule ElixirKafkaIamAuth do
         client_id,
         timeout,
         _sasl_opts =
-          {mechanism = :AWS_MSK_IAM, aws_secret_key_id, aws_secret_access_key, security_token}
+          {mechanism = :AWS_MSK_IAM, aws_secret_key_id, aws_secret_access_key}
       )
       when is_binary(aws_secret_key_id) and is_binary(aws_secret_access_key) do
     with :ok <- handshake(sock, mod, timeout, client_id, mechanism, @handshake_version) do
@@ -108,8 +107,7 @@ defmodule ElixirKafkaIamAuth do
           aws_secret_key_id,
           aws_secret_access_key,
           region,
-          service,
-          security_token
+          service
         )
 
       Logger.debug("Generated client final msg #{inspect(client_final_msg)}")

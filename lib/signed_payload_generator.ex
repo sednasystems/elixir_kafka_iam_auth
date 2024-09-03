@@ -36,8 +36,7 @@ defmodule SignedPayloadGenerator do
         aws_secret_key_id,
         aws_secret_access_key,
         region,
-        service,
-        security_token
+        service
       )
       when is_binary(aws_secret_key_id) and
              is_binary(aws_secret_access_key) and is_binary(region) do
@@ -53,8 +52,7 @@ defmodule SignedPayloadGenerator do
         now |> NaiveDateTime.to_erl(),
         @method,
         url,
-        ttl: @ttl,
-        session_token: security_token
+        ttl: @ttl
       )
 
     url_map = :aws_signature_utils.parse_url(aws_v4_signed_query)
