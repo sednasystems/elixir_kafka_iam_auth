@@ -12,7 +12,6 @@ defmodule SignedPayloadGenerator do
               binary(),
               binary(),
               binary(),
-              binary(),
               binary()
             ) ::
               binary()
@@ -20,7 +19,7 @@ defmodule SignedPayloadGenerator do
   # TODO: Make user_agent, version and ttl runtime configurable
   @method "GET"
   @version "2020_10_22"
-  @user_agent "msk-elixir-client"
+  @user_agent "user-agent"
   # 15 minutes
   @ttl 900
 

@@ -90,7 +90,7 @@ defmodule ElixirKafkaIamAuth do
           {mechanism = :AWS_MSK_IAM, aws_secret_key_id, aws_secret_access_key}
       )
       when is_binary(aws_secret_key_id) and is_binary(aws_secret_access_key) do
-    with :ok <- handshake(sock, mod, timeout, client_id, mechanism, @handshake_version) do
+    with :ok <- handshake(sock, mod, timeout, client_id, :OAUTHBEARER, @handshake_version) do
       region = Application.get_env(:elixir_kafka_iam_auth, :aws_region)
       service = Application.get_env(:elixir_kafka_iam_auth, :kafka_service)
 
@@ -100,17 +100,64 @@ defmodule ElixirKafkaIamAuth do
         "Params: #{inspect(%{host: host, sock: sock, mod: mod, client_id: client_id, timeout: timeout, sasl_opts: {:AWS_MSK_IAM, aws_secret_key_id, aws_secret_access_key}})}"
       )
 
-      client_final_msg =
-        @signed_payload_generator.get_msk_signed_payload(
-          host,
-          DateTime.utc_now(),
+      # client_final_msg =
+      #   @signed_payload_generator.get_msk_signed_payload(
+      #     host,
+      #     DateTime.utc_now(),
+      #     aws_secret_key_id,
+      #     aws_secret_access_key,
+      #     region,
+      #     service
+      #   )
+      #
+
+      action_query_param = URI.encode_query(%{"Action" => "kafka-cluster:Connect"})
+      url = "https://kafka.#{region}.amazonaws.com?#{action_query_param}"
+
+      token =
+        :aws_signature.sign_v4_query_params(
           aws_secret_key_id,
           aws_secret_access_key,
-          region,
-          service
+          "us-west-2",
+          "kafka-cluster",
+          DateTime.utc_now() |> NaiveDateTime.to_erl(),
+          "GET",
+          url,
+          ttl: 900
         )
+        |> URI.parse()
+        |> (fn u ->
+              Map.put(
+                u,
+                :query,
+                u.query
+                |> URI.decode_query()
+                |> Map.put("User-Agent", "sedna-msk-iam-client")
+                |> URI.encode_query(:rfc3986)
+              )
+              |> Map.put(:path, "/")
+            end).()
+        |> URI.to_string()
+        |> Base.url_encode64()
+        |> String.replace(~r/=/, "", global: true)
 
       Logger.debug("Generated client final msg #{inspect(client_final_msg)}")
+
+      # %{token: token} =
+      # client_final_msg =
+      #   %{
+      #     token:
+      #       "aHR0cHM6Ly9rYWZrYS51cy13ZXN0LTIuYW1hem9uYXdzLmNvbS8_QWN0aW9uPWthZmthLWNsdXN0ZXIlM0FDb25uZWN0JlVzZXItQWdlbnQ9YXdzLW1zay1pYW0tc2FzbC1zaWduZXItanMlMkYxLjAuMCZYLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFTSUE2TEVCWUFHREJBTzQ1NlY2JTJGMjAyNDA5MDMlMkZ1cy13ZXN0LTIlMkZrYWZrYS1jbHVzdGVyJTJGYXdzNF9yZXF1ZXN0JlgtQW16LURhdGU9MjAyNDA5MDNUMTUyMzE3WiZYLUFtei1FeHBpcmVzPTkwMCZYLUFtei1TZWN1cml0eS1Ub2tlbj1JUW9KYjNKcFoybHVYMlZqRUtMJTJGJTJGJTJGJTJGJTJGJTJGJTJGJTJGJTJGJTJGd0VhQ1dWMUxYZGxjM1F0TVNKSE1FVUNJUUNLNFpUZSUyRnpPdE9rSlp6VklLcFQzNkRQczE4MjY2MWVTcHdkTWQ5S0Y4ZlFJZ1hiUXVtRVYwJTJGbFBHdm5KSk43UDQwckQzTnNEd2luTmZqQmNhNnRCYmdWb3FrZ01JdSUyRiUyRiUyRiUyRiUyRiUyRiUyRiUyRiUyRiUyRiUyRkFSQUFHZ3c1T0RVNU5qY3hNREF5T1RRaURQTzJraDElMkIxb3ByMXVYejJ5cm1BdnFzeDB0ZHJmU0lWZlNBSmlNTjYlMkYlMkYlMkZIWWt0bGwzZkZENWpJNzBkbnBIa1h6NUdBcDl1UGVUazlWalBUcnlzZ25UMmslMkJERHluY1FUaW45VXE0JTJGa3R3bGdrZXFCWEhMSUl4V2txYzlzeDlZVHNmeW93MmxZMDZUNGJMRFR3R0c4SUdjQjh5aHU1JTJGRWV6SXBjVHZiR3psaDlTWnN2Qk9uRjRpNWN5WXZjR0w2V1JWaUR0bUtZVjFPTWY3R212RGw3WDJ3TVVaQkZyck9SMTAlMkZNTlpBMkdYUk5QWnZhaHhjVU1HSkJFT2RvSElUMjhscVAzQUNHSk1IVml6YnRJQUJsNlZ0dVNTSGpxQjdsakdrYjMlMkYxdHhvSDN0OXBLMkhMWSUyRjh5cHBHcnpQbk1hSktHbWI2NiUyQjJOZ3YyQ25LRHFFYVdmc29xejdma3ZrUEhIVTFqVkNPVldvcDRvOFd0bjQlMkZrTTJIRWV4SnUlMkZ3dDMlMkZLRU8xRk4lMkJ6TE1Fd2hkbUExSUc1eDlmU2R2SXhDMUtFcFA0NCUyQnNLUWVpTHRKamlnZWFxMzdpTmVCenZDVCUyRmkxbGZnenZyYTRYQmJnNDFUdk5CUTNSTFloVEZDQW41bVklMkJlOHVXZzQ5QTdla3o5aEF3eGJUYnRnWTZwZ0ZCclMlMkJ3YmNQN0dpcjNhQ3psTUpKVE5vUWRlckY2dzJ2bGFYRER2SzhOTkVDS3BvZ3VKVGFPY2RzTXlkWkdVVlpTQ0lOU1NFUWJ1dTNnUEhweFdsYmVqN01RRVVzbGFLM0s4cmpnWSUyRkFJSFZmU1FPTTlsWiUyRkQlMkJVaTc5bTIzdlNIQkxpY240bENucUFrempYWkhLJTJGeEJZem5iJTJGMnBSNzk0R1B3SVZUdW1OSHFmYldMWVpxeTRZaXV4SFNGbk1NTDVLZWNmelI5ZVluNDM5VXUlMkJSRCUyRnhQYUJmSVRzelkmWC1BbXotU2lnbmF0dXJlPWE1ZDFiMjhlYWMzY2RmNzI5ZWQzODczMDI3MTYxZWNjMTE4ZGZmMWI2NjI0YzY2Y2FkN2Q5YjQxNWQxN2Y1MzImWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0",
+      #     expiryTime: 1_725_377_897_000
+      #   }
+      #   |> Jason.encode!()
+
+      # client_final_msg = token
+      #
+
+      client_final_msg =
+        "n,,#{<<1>>}auth=Bearer #{token}#{<<1>>}#{<<1>>}"
+        |> :binary.bin_to_list()
 
       server_final_msg = send_recv(sock, mod, client_id, timeout, client_final_msg)
 
@@ -165,4 +212,18 @@ defmodule ElixirKafkaIamAuth do
         other
     end
   end
+
+  # def connect_to_sedna_kafka() do
+  #   :brod.get_metadata(
+  #     [{"b-1.cdcv3.0d5r8k.c12.kafka.us-west-2.amazonaws.com", 9098}],
+  #     ["sedna_test3_message"],
+  #     ssl: true,
+  #     sasl: {
+  #       :callback,
+  #       ElixirKafkaIamAuth,
+  #       {:AWS_MSK_IAM, System.get_env("AWS_ACCESS_KEY_ID"),
+  #        System.get_env("AWS_SECRET_ACCESS_KEY")}
+  #     }
+  #   )
+  # end
 end
