@@ -27,7 +27,8 @@ defmodule ElixirKafkaIamAuth do
     # being set
     %{
       access_key_id: access_key_id,
-      secret_access_key: secret_access_key
+      secret_access_key: secret_access_key,
+      security_token: security_token
     } = ExAws.Config.new(:ecs)
 
     Logger.debug(
@@ -40,7 +41,7 @@ defmodule ElixirKafkaIamAuth do
       mod,
       client_id,
       timeout,
-      {mechanism, access_key_id, secret_access_key}
+      {mechanism, access_key_id, secret_access_key, security_token}
     )
   end
 
@@ -87,7 +88,7 @@ defmodule ElixirKafkaIamAuth do
         client_id,
         timeout,
         _sasl_opts =
-          {_mechanism = :AWS_MSK_IAM, aws_secret_key_id, aws_secret_access_key}
+          {_mechanism = :AWS_MSK_IAM, aws_secret_key_id, aws_secret_access_key, security_token}
       )
       when is_binary(aws_secret_key_id) and is_binary(aws_secret_access_key) do
     with :ok <- handshake(sock, mod, timeout, client_id, :OAUTHBEARER, @handshake_version) do
@@ -123,7 +124,10 @@ defmodule ElixirKafkaIamAuth do
           DateTime.utc_now() |> NaiveDateTime.to_erl(),
           "GET",
           url,
-          ttl: 900
+          ttl: 900,
+          # Note the underlying library does assign this to the X-Aws-Security-Token header and amz regards it as it
+          # not sure why in other places they call it the session token
+          session_token: URI.encode_www_form(security_token)
         )
         |> URI.parse()
         |> (fn u ->
