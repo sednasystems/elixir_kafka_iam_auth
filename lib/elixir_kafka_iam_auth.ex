@@ -7,11 +7,11 @@ defmodule ElixirKafkaIamAuth do
   require Logger
 
   @kpro_lib Application.compile_env(:elixir_kafka_iam_auth, :kpro_lib, KafkaProtocolLib)
-  @signed_payload_generator Application.compile_env(
-                              :elixir_kafka_iam_auth,
-                              :signed_payload_generator,
-                              SignedPayloadGenerator
-                            )
+  # @signed_payload_generator Application.compile_env(
+  #                             :elixir_kafka_iam_auth,
+  #                             :signed_payload_generator,
+  #                             SignedPayloadGenerator
+  #                           )
 
   @handshake_version 1
 
@@ -87,7 +87,7 @@ defmodule ElixirKafkaIamAuth do
         client_id,
         timeout,
         _sasl_opts =
-          {mechanism = :AWS_MSK_IAM, aws_secret_key_id, aws_secret_access_key}
+          {_mechanism = :AWS_MSK_IAM, aws_secret_key_id, aws_secret_access_key}
       )
       when is_binary(aws_secret_key_id) and is_binary(aws_secret_access_key) do
     with :ok <- handshake(sock, mod, timeout, client_id, :OAUTHBEARER, @handshake_version) do
@@ -141,8 +141,6 @@ defmodule ElixirKafkaIamAuth do
         |> Base.url_encode64()
         |> String.replace(~r/=/, "", global: true)
 
-      Logger.debug("Generated client final msg #{inspect(client_final_msg)}")
-
       # %{token: token} =
       # client_final_msg =
       #   %{
@@ -158,6 +156,8 @@ defmodule ElixirKafkaIamAuth do
       client_final_msg =
         "n,,#{<<1>>}auth=Bearer #{token}#{<<1>>}#{<<1>>}"
         |> :binary.bin_to_list()
+
+      Logger.debug("Generated client final msg #{inspect(client_final_msg)}")
 
       server_final_msg = send_recv(sock, mod, client_id, timeout, client_final_msg)
 
@@ -226,4 +226,13 @@ defmodule ElixirKafkaIamAuth do
   #     }
   #   )
   # end
+  #
+  #
+
+  # The implementation of auth/7 was missing in the orig. version - it just adds the handshake version
+  # which we will ignore here
+  @impl true
+  def auth(host, sock, _handshake_version, mod, client_name, timeout, saslopts) do
+    auth(host, sock, mod, client_name, timeout, saslopts)
+  end
 end
