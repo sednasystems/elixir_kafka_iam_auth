@@ -92,7 +92,10 @@ defmodule ElixirKafkaIamAuth do
       )
       when is_binary(aws_secret_key_id) and is_binary(aws_secret_access_key) do
     with :ok <- handshake(sock, mod, timeout, client_id, :OAUTHBEARER, @handshake_version) do
-      region = Application.get_env(:elixir_kafka_iam_auth, :aws_region)
+
+      # TODO: it doesn't make sense for these config values to exist - should always come from the environment
+      # region = Application.get_env(:elixir_kafka_iam_auth, :aws_region)
+      region = System.get_env("AWS_REGION")
       service = Application.get_env(:elixir_kafka_iam_auth, :kafka_service)
 
       Logger.debug("Connecting to kafka with region #{region} and service #{service}")
@@ -119,7 +122,7 @@ defmodule ElixirKafkaIamAuth do
         :aws_signature.sign_v4_query_params(
           aws_secret_key_id,
           aws_secret_access_key,
-          "us-west-2",
+          region,
           "kafka-cluster",
           DateTime.utc_now() |> NaiveDateTime.to_erl(),
           "GET",
@@ -216,22 +219,6 @@ defmodule ElixirKafkaIamAuth do
         other
     end
   end
-
-  # def connect_to_sedna_kafka() do
-  #   :brod.get_metadata(
-  #     [{"b-1.cdcv3.0d5r8k.c12.kafka.us-west-2.amazonaws.com", 9098}],
-  #     ["sedna_test3_message"],
-  #     ssl: true,
-  #     sasl: {
-  #       :callback,
-  #       ElixirKafkaIamAuth,
-  #       {:AWS_MSK_IAM, System.get_env("AWS_ACCESS_KEY_ID"),
-  #        System.get_env("AWS_SECRET_ACCESS_KEY")}
-  #     }
-  #   )
-  # end
-  #
-  #
 
   # The implementation of auth/7 was missing in the orig. version - it just adds the handshake version
   # which we will ignore here
